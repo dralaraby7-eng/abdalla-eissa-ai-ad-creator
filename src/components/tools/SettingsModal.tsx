@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Settings as SettingsIcon, Trash2, Lock, AlertTriangle, Eye, EyeOff, UserPlus, Users, RotateCcw } from 'lucide-react';
+import { X, Settings as SettingsIcon, Trash2, Lock, AlertTriangle, Eye, EyeOff, UserPlus, Users, RotateCcw, ShieldCheck } from 'lucide-react';
 import {
   loadSettings,
   saveSettings,
   loadUsage,
   clearAllStorage,
   hashPassword,
+  isAdminAuthed,
+  setAdminAuthed,
   DEFAULT_SETTINGS,
 } from '../../utils/storage';
 import {
@@ -37,6 +39,11 @@ export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
   const [confirmClear, setConfirmClear] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
 
+  // Admin gate
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [inlineAdminPwd, setInlineAdminPwd] = useState('');
+  const [inlinePwdError, setInlinePwdError] = useState('');
+
   // Users & Subscriptions
   const [users, setUsers] = useState<User[]>([]);
   const [newUserName, setNewUserName] = useState('');
@@ -47,11 +54,27 @@ export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
 
   useEffect(() => {
     if (open) {
-      setSettings(loadSettings());
+      const s = loadSettings();
+      setSettings(s);
       setUsage(loadUsage());
       setUsers(loadUsers());
+      // Admin = no password configured yet, OR already authenticated this session
+      setIsAdmin(!s.requirePassword || !s.adminPasswordHash || isAdminAuthed());
     }
   }, [open]);
+
+  function handleInlineAdminUnlock(e: React.FormEvent) {
+    e.preventDefault();
+    const s = loadSettings();
+    if (hashPassword(inlineAdminPwd.trim()) === s.adminPasswordHash) {
+      setAdminAuthed(true);
+      setIsAdmin(true);
+      setInlineAdminPwd('');
+      setInlinePwdError('');
+    } else {
+      setInlinePwdError(t('Incorrect password', 'كلمة مرور غير صحيحة'));
+    }
+  }
 
   function handleAddUser() {
     if (!newUserName.trim()) { setUserError(t('Name is required.', 'الاسم مطلوب.')); return; }
@@ -234,7 +257,8 @@ export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
                 </div>
               </Section>
 
-              {/* API Keys */}
+              {/* API Keys — ADMIN ONLY */}
+              {isAdmin && (
               <Section title={t('API Keys (optional override)', 'مفاتيح API (تجاوز اختياري)')}>
                 <p className="text-xs text-zinc-500 mb-3">
                   {t(
@@ -279,8 +303,10 @@ export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
                   </div>
                 </Field>
               </Section>
+              )}
 
-              {/* Usage Limits */}
+              {/* Usage Limits — ADMIN ONLY */}
+              {isAdmin && (
               <Section title={t('Usage Limits', 'حدود الاستخدام')}>
                 <Field
                   label={t('Monthly Generation Limit (0 = unlimited)', 'حد التوليد الشهري (0 = بلا حد)')}
@@ -303,8 +329,10 @@ export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
                   />
                 </div>
               </Section>
+              )}
 
-              {/* Admin */}
+              {/* Admin Lock — ADMIN ONLY */}
+              {isAdmin && (
               <Section title={t('Admin Lock', 'قفل الإدارة')}>
                 <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 mb-3">
                   <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
@@ -345,6 +373,7 @@ export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
                   </span>
                 </label>
               </Section>
+              )}
 
               {/* Misc */}
               <Section title={t('Misc', 'متفرقات')}>
@@ -361,7 +390,45 @@ export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
                 </label>
               </Section>
 
-              {/* Users & Subscriptions */}
+              {/* Admin unlock card — shown to non-admin when a password is set */}
+              {!isAdmin && (
+                <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Lock className="w-4 h-4 text-indigo-400" />
+                    <span className="text-xs font-bold uppercase tracking-widest text-indigo-400">
+                      {t('Admin Access', 'وصول الإدارة')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 mb-3">
+                    {t(
+                      'API keys, user management, and danger zone are restricted to the admin.',
+                      'مفاتيح API وإدارة المستخدمين ومنطقة الخطر مقيدة للمسؤول فقط.'
+                    )}
+                  </p>
+                  <form onSubmit={handleInlineAdminUnlock} className="flex gap-2">
+                    <input
+                      type="password"
+                      value={inlineAdminPwd}
+                      onChange={(e) => { setInlineAdminPwd(e.target.value); setInlinePwdError(''); }}
+                      placeholder={t('Admin password…', 'كلمة مرور الإدارة…')}
+                      className="input-base flex-1 text-sm"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold flex items-center gap-1.5 transition-colors"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      {t('Unlock', 'فتح')}
+                    </button>
+                  </form>
+                  {inlinePwdError && (
+                    <p className="mt-2 text-xs text-rose-400">{inlinePwdError}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Users & Subscriptions — ADMIN ONLY */}
+              {isAdmin && (
               <Section title={t('Users & Subscriptions', 'المستخدمون والاشتراكات')}>
                 <p className="text-xs text-zinc-500 mb-4">
                   {t(
@@ -494,8 +561,10 @@ export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
                   </button>
                 </div>
               </Section>
+              )} {/* end isAdmin — Users */}
 
-              {/* Danger Zone */}
+              {/* Danger Zone — ADMIN ONLY */}
+              {isAdmin && (
               <Section title={t('Danger Zone', 'منطقة خطرة')} accent="rose">
                 <div className="space-y-2">
                   {!confirmReset ? (
@@ -555,6 +624,7 @@ export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
                   )}
                 </div>
               </Section>
+              )} {/* end isAdmin — Danger Zone */}
             </div>
 
             {/* Footer */}
