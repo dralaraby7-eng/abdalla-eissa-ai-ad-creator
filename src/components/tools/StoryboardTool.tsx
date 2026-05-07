@@ -17,6 +17,7 @@ import { ModelSelector } from '../ui/ModelSelector';
 import { ImageUpload } from '../ui/ImageUpload';
 import { CopyButton } from '../ui/CopyButton';
 import { LabelTag } from '../ui/LabelTag';
+import { ImageColorPicker } from '../ui/ImageColorPicker';
 import {
   CINEMATIC_STYLES,
   SUGGESTED_KEYWORDS,
@@ -85,27 +86,17 @@ export function StoryboardTool({ settings, onUsage }: Props) {
   const [refinementComment, setRefinementComment] = useState('');
   const [refinementTarget, setRefinementTarget] = useState<number | null>(null);
 
+  // ---- image color picker
+  const [imagePickerTarget, setImagePickerTarget] = useState<'color1' | 'color2' | null>(null);
+
   useEffect(() => {
     if (productImages.length > 0 && bgImage.length > 0 && !bgImageDesc && !analyzingBg) {
       autoDescribeBg();
     }
   }, [bgImage]);
 
-  async function pickColorFromScreen(target: 'color1' | 'color2') {
-    const EyeDropper = (window as any).EyeDropper;
-    if (!EyeDropper) {
-      setError('EyeDropper is not supported in this browser. Use Chrome/Edge 95+.');
-      return;
-    }
-    try {
-      const dropper = new EyeDropper();
-      const result = await dropper.open();
-      if (target === 'color1') setBgColor(result.sRGBHex);
-      else setBgColor2(result.sRGBHex);
-    } catch {
-      // user cancelled — do nothing
-    }
-  }
+  // Collect all uploaded images available for color picking
+  const pickerImages = [...productImages, ...bgImage, ...styleImage];
 
   async function autoDescribeBg() {
     if (bgImage.length === 0) return;
@@ -487,9 +478,10 @@ export function StoryboardTool({ settings, onUsage }: Props) {
               </button>
               <button
                 type="button"
-                title="Pick color from screen"
-                onClick={() => pickColorFromScreen('color1')}
-                className="p-2 rounded-xl bg-white/5 hover:bg-indigo-500/20 border border-white/10 text-zinc-400 hover:text-indigo-300 transition-colors"
+                title={t('Pick from image', 'اختر من الصورة')}
+                disabled={pickerImages.length === 0}
+                onClick={() => setImagePickerTarget('color1')}
+                className="p-2 rounded-xl bg-white/5 hover:bg-indigo-500/20 border border-white/10 text-zinc-400 hover:text-indigo-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <Pipette className="w-4 h-4" />
               </button>
@@ -511,9 +503,10 @@ export function StoryboardTool({ settings, onUsage }: Props) {
               </button>
               <button
                 type="button"
-                title="Pick color from screen"
-                onClick={() => pickColorFromScreen('color2')}
-                className="p-2 rounded-xl bg-white/5 hover:bg-indigo-500/20 border border-white/10 text-zinc-400 hover:text-indigo-300 transition-colors"
+                title={t('Pick from image', 'اختر من الصورة')}
+                disabled={pickerImages.length === 0}
+                onClick={() => setImagePickerTarget('color2')}
+                className="p-2 rounded-xl bg-white/5 hover:bg-indigo-500/20 border border-white/10 text-zinc-400 hover:text-indigo-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <Pipette className="w-4 h-4" />
               </button>
@@ -787,6 +780,18 @@ export function StoryboardTool({ settings, onUsage }: Props) {
           </div>
         )}
       </div>
+
+      {/* Image color picker modal */}
+      {imagePickerTarget && (
+        <ImageColorPicker
+          images={pickerImages}
+          onPick={(hex) => {
+            if (imagePickerTarget === 'color1') setBgColor(hex);
+            else setBgColor2(hex);
+          }}
+          onClose={() => setImagePickerTarget(null)}
+        />
+      )}
     </div>
   );
 }

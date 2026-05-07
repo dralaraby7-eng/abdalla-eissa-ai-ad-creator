@@ -17,6 +17,7 @@ import {
   deleteUser,
   updateUserLimit,
   resetUserCredits,
+  resetToDefaultUsers,
 } from '../../utils/userStorage';
 import { AI_MODELS } from '../../config/models';
 import type { AppSettings, User } from '../../types';
@@ -31,8 +32,6 @@ interface Props {
 export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
   const [settings, setSettings] = useState<AppSettings>(loadSettings());
   const [usage, setUsage] = useState(loadUsage());
-  const [showGeminiKey, setShowGeminiKey] = useState(false);
-  const [showOpenRouterKey, setShowOpenRouterKey] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [adminPwd, setAdminPwd] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
@@ -257,53 +256,7 @@ export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
                 </div>
               </Section>
 
-              {/* API Keys — ADMIN ONLY */}
-              {isAdmin && (
-              <Section title={t('API Keys (optional override)', 'مفاتيح API (تجاوز اختياري)')}>
-                <p className="text-xs text-zinc-500 mb-3">
-                  {t(
-                    'Leave blank to use the keys configured in Google AI Studio. Custom keys are stored only in your browser.',
-                    'اتركها فارغة لاستخدام المفاتيح المُعدّة في Google AI Studio. المفاتيح المخصصة تُحفظ في متصفحك فقط.'
-                  )}
-                </p>
-                <Field label="Gemini API Key">
-                  <div className="relative">
-                    <input
-                      type={showGeminiKey ? 'text' : 'password'}
-                      value={settings.customGeminiKey || ''}
-                      onChange={(e) => update('customGeminiKey', e.target.value)}
-                      placeholder="AIza..."
-                      className="input-base w-full pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowGeminiKey(!showGeminiKey)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-zinc-500 hover:text-zinc-300"
-                    >
-                      {showGeminiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </Field>
-                <Field label="OpenRouter API Key (Claude/GPT)">
-                  <div className="relative">
-                    <input
-                      type={showOpenRouterKey ? 'text' : 'password'}
-                      value={settings.customOpenRouterKey || ''}
-                      onChange={(e) => update('customOpenRouterKey', e.target.value)}
-                      placeholder="sk-or-..."
-                      className="input-base w-full pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowOpenRouterKey(!showOpenRouterKey)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-zinc-500 hover:text-zinc-300"
-                    >
-                      {showOpenRouterKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </Field>
-              </Section>
-              )}
+              {/* API Keys removed — loaded from .env only */}
 
               {/* Usage Limits — ADMIN ONLY */}
               {isAdmin && (
@@ -430,12 +383,21 @@ export function SettingsModal({ open, onClose, onSettingsChange }: Props) {
               {/* Users & Subscriptions — ADMIN ONLY */}
               {isAdmin && (
               <Section title={t('Users & Subscriptions', 'المستخدمون والاشتراكات')}>
-                <p className="text-xs text-zinc-500 mb-4">
-                  {t(
-                    'Add users with a PIN and credit limit. Credits = number of OpenRouter API calls allowed.',
-                    'أضف مستخدمين برمز PIN وحد ائتمان. الائتمانات = عدد طلبات OpenRouter المسموح بها.'
-                  )}
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-xs text-zinc-500">
+                    {t(
+                      'Add users with a PIN and credit limit. Credits = number of OpenRouter API calls allowed.',
+                      'أضف مستخدمين برمز PIN وحد ائتمان. الائتمانات = عدد طلبات OpenRouter المسموح بها.'
+                    )}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { resetToDefaultUsers(); setUsers(loadUsers()); }}
+                    className="shrink-0 ml-3 px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest transition-colors"
+                  >
+                    {t('Reset defaults', 'إعادة الافتراضي')}
+                  </button>
+                </div>
 
                 {/* Existing users */}
                 {users.length > 0 && (

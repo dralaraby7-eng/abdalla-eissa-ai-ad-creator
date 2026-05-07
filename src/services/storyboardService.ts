@@ -154,7 +154,12 @@ export async function generateStoryboard(req: StoryboardRequest): Promise<string
           'The above images are reference images for the NEXT set of the storyboard. Use them to guide the style, composition, or elements of the continuation.',
       });
     }
-    promptText = `CONTINUATION MODE (NEXT BUTTON CLICKED)\n\nHere is the previous storyboard history:\n\n${req.previousContext}\n\nPlease generate [STORYBOARD - SET ${req.setNumber}] continuing the sequence. ONLY output the [STORYBOARD_PROMPT] part. Introduce new motion variations, angles, and macro focus.${
+    const framesPerGrid: Record<string, number> = { '1x2': 2, '2x2': 4, '3x3': 9 };
+    const framesPerSet = framesPerGrid[req.gridSelection || '3x3'] || 9;
+    const startFrame = (req.setNumber - 1) * framesPerSet + 1;
+    const endFrame = req.setNumber * framesPerSet;
+
+    promptText = `CONTINUATION MODE — SET ${req.setNumber}\n\nHere is the complete storyboard history so far:\n\n${req.previousContext}\n\nGenerate [STORYBOARD - SET ${req.setNumber}]: frames ${startFrame} to ${endFrame}, continuing DIRECTLY after frame ${startFrame - 1}.\n\nCRITICAL FRAME NUMBERING: In the numbered frame list you MUST start from ${startFrame}. and count up to ${endFrame}. — NEVER restart from 1. The sequence must be seamless with the previous set.\n\nONLY output the [STORYBOARD_PROMPT] part. Introduce new motion variations, angles, and macro focus.${
       req.continuationFocus ? `\n\nFOCUS FOR THIS SET: "${req.continuationFocus}"` : ''
     }`;
 
@@ -165,7 +170,7 @@ export async function generateStoryboard(req: StoryboardRequest): Promise<string
         '3x3': '( 3 rows 3 coloumn )',
       };
       const dims = gridMapping[req.gridSelection] || '';
-      promptText += `\n\nGrid Output: "${req.gridSelection}". Generate exactly the number of frames required for a ${req.gridSelection} grid. IMPORTANT: In the [STORYBOARD_PROMPT] line, you MUST append "${dims}" immediately after the grid size mention (e.g., "Create a ${req.gridSelection} grid ${dims} of...").`;
+      promptText += `\n\nGrid Output: "${req.gridSelection}". Generate exactly ${framesPerSet} frames. In the [STORYBOARD_PROMPT] line append "${dims}" after the grid size.`;
     }
 
     if (req.orientation) {
@@ -174,7 +179,7 @@ export async function generateStoryboard(req: StoryboardRequest): Promise<string
         vertical: '9:16',
         square: '1:1',
       };
-      promptText += `\n\nStoryboard Orientation: "${req.orientation}". Ensure visual compositions suit a ${req.orientation} aspect ratio (${aspectMap[req.orientation] || '16:9'}).`;
+      promptText += `\n\nStoryboard Orientation: "${req.orientation}" (${aspectMap[req.orientation] || '16:9'}).`;
     }
   } else {
     promptText = `Please analyze the attached product image(s) and generate a storyboard.`;

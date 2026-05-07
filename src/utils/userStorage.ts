@@ -3,6 +3,29 @@ import { hashPassword } from './storage';
 
 const USERS_KEY = 'aec_users_v2';
 const SESSION_KEY = 'aec_user_session_v2';
+const SEED_KEY = 'aec_users_seed_v1';
+
+const DEFAULT_USERS = [
+  { name: 'Abdalla', pin: '1122', limit: 0 },
+  { name: 'Alaraby', pin: '3344', limit: 0 },
+  { name: 'Admin',   pin: '5566', limit: 0 },
+];
+
+export function seedDefaultUsers(force = false): void {
+  if (!force && localStorage.getItem(SEED_KEY)) return;
+  const existing = loadUsers();
+  DEFAULT_USERS.forEach((u) => {
+    const alreadyExists = existing.some((e) => e.name.toLowerCase() === u.name.toLowerCase());
+    if (!alreadyExists) addUser(u.name, u.pin, u.limit);
+  });
+  localStorage.setItem(SEED_KEY, '1');
+}
+
+export function resetToDefaultUsers(): void {
+  localStorage.removeItem(USERS_KEY);
+  localStorage.removeItem(SEED_KEY);
+  seedDefaultUsers(true);
+}
 
 // ---------- USER CRUD ----------
 
